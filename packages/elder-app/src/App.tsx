@@ -46,6 +46,17 @@ function App() {
                 <ChatPage />
               </ProtectedRoute>
             } />
+<<<<<<< Updated upstream
+=======
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/signup" element={<SignupPage />} />
+            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/auth/profile-setup" element={
+              <ProtectedRoute allowedRoles={['elder']} requireSetup={false}>
+                <ProfileSetupPage />
+              </ProtectedRoute>
+            } />
+>>>>>>> Stashed changes
           </Routes>
         </div>
       </BrowserRouter>
