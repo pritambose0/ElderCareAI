@@ -7,6 +7,7 @@
     "scripts": {
         "dev:elder": "npm run dev --workspace=@elder-nest/elder-app",
         "dev:family": "npm run dev --workspace=@elder-nest/family-dashboard",
+        "dev:admin": "npm run dev --workspace=admin-portal",
         "dev": "npm run dev:elder",
         "build": "npm run build --workspaces"
     },

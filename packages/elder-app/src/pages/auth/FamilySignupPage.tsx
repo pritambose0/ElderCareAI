@@ -1,550 +1,423 @@
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Family Signup Page
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Mail, Lock, Phone, Check, ChevronRight, ChevronLeft, Users, Shield, Heart } from 'lucide-react';
+import { z } from 'zod';
+import { OAuthButton, signUpFamily, getFriendlyErrorMessage } from '@elder-nest/shared';
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import PhoneInput from '../../components/auth/PhoneInput';
-import { familySignup } from '../../services/authApi';
+// Define schema locally since we're adapting the UI structure
+const familySignupSchema = z.object({
+  fullName: z.string().min(2, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+  phone: z.string().min(10, 'Valid phone number is required'),
+  countryCode: z.string().default('+91'),
+  agreeToTerms: z.literal(true, {
+    errorMap: () => ({ message: 'You must agree to the terms' }),
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
-const FamilySignupPage: React.FC = () => {
-    const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+type FamilySignupFormData = z.infer<typeof familySignupSchema>;
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [countryCode, setCountryCode] = useState('IN');
-    const [showPassword, setShowPassword] = useState(false);
-    const [agreeTerms, setAgreeTerms] = useState(false);
+const FamilySignupPage = () => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handlePhoneChange = (newPhone: string, newCountryCode: string) => {
-        setPhone(newPhone);
-        setCountryCode(newCountryCode);
-    };
+  const { register, handleSubmit, trigger, setValue, watch, formState: { errors } } = useForm<FamilySignupFormData>({
+    resolver: zodResolver(familySignupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      countryCode: '+91'
+    }
+  });
 
-    const validateForm = (): string | null => {
-        if (!fullName.trim()) {
-            return 'Please enter your full name';
-        }
-        if (!email.trim()) {
-            return 'Please enter your email';
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return 'Please enter a valid email address';
-        }
-        if (!password) {
-            return 'Please enter a password';
-        }
-        if (password.length < 8) {
-            return 'Password must be at least 8 characters';
-        }
-        if (!/[A-Z]/.test(password)) {
-            return 'Password must contain at least one uppercase letter';
-        }
-        if (!/[a-z]/.test(password)) {
-            return 'Password must contain at least one lowercase letter';
-        }
-        if (!/[0-9]/.test(password)) {
-            return 'Password must contain at least one number';
-        }
-        if (password !== confirmPassword) {
-            return 'Passwords do not match';
-        }
-        if (!agreeTerms) {
-            return 'Please agree to the Terms of Service';
-        }
-        return null;
-    };
+  const nextStep = async () => {
+    let fieldsToValidate: (keyof FamilySignupFormData)[] = [];
+    if (step === 1) fieldsToValidate = ['fullName', 'email', 'password', 'confirmPassword'];
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      setStep(prev => prev + 1);
+      setError(null);
+    }
+  };
 
-        const validationError = validateForm();
-        if (validationError) {
-            setError(validationError);
-            return;
-        }
+  const prevStep = () => setStep(prev => prev - 1);
 
-        setIsLoading(true);
-        setError('');
+  const onSubmit = async (data: FamilySignupFormData) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log("Submitting family signup...", data);
+      await signUpFamily({
+        ...data,
+        // Combine country code if needed or pass separately
+        phone: `${data.countryCode} ${data.phone}`,
+        relationship: 'other' // Default, can be updated later in profile
+      });
+      navigate('/family');
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError(getFriendlyErrorMessage(err.code) || "Signup failed. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
-        try {
-            const result = await familySignup({
-                email: email.trim().toLowerCase(),
-                password,
-                fullName: fullName.trim(),
-                phone: phone || undefined,
-                countryCode: phone ? countryCode : undefined,
-            });
+  const stepTitles = [
+    { title: 'Account Details', subtitle: 'Create your login credentials' },
+    { title: 'Contact Info', subtitle: 'How can we reach you?' },
+  ];
 
-            if (result.success) {
-                navigate('/family/dashboard');
-            } else {
-                setError(result.message || 'Signup failed');
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Signup failed');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  return (
+    <div className="h-screen flex overflow-hidden">
+      {/* Left Panel - Family Branding Gradient */}
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6 }}
+        className="hidden lg:flex lg:w-5/12 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #0e7490 50%, #059669 100%)'
+        }}
+      >
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-40 right-20 w-48 h-48 bg-white rounded-full blur-3xl"></div>
+        </div>
 
-    // Password strength indicator
-    const getPasswordStrength = (): { strength: number; label: string; color: string } => {
-        if (!password) return { strength: 0, label: '', color: '#e2e8f0' };
+        {/* Floating Icons */}
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="absolute top-24 right-16 text-white/30"
+        >
+          <Users size={40} />
+        </motion.div>
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute bottom-32 left-12 text-white/25"
+        >
+          <Shield size={36} fill="currentColor" />
+        </motion.div>
 
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (/[A-Z]/.test(password)) strength++;
-        if (/[a-z]/.test(password)) strength++;
-        if (/[0-9]/.test(password)) strength++;
-        if (/[^A-Za-z0-9]/.test(password)) strength++;
-
-        if (strength <= 2) return { strength: 1, label: 'Weak', color: '#ef4444' };
-        if (strength <= 3) return { strength: 2, label: 'Medium', color: '#f59e0b' };
-        if (strength <= 4) return { strength: 3, label: 'Strong', color: '#10b981' };
-        return { strength: 4, label: 'Very Strong', color: '#059669' };
-    };
-
-    const passwordStrength = getPasswordStrength();
-
-    return (
-        <div className="auth-page">
-            <div className="auth-container">
-                <div className="auth-header">
-                    <div className="auth-logo">👨‍👩‍👧</div>
-                    <h1 className="auth-title">Create Family Account</h1>
-                    <p className="auth-subtitle">Join ElderNest to care for your loved ones</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-group">
-                        <label htmlFor="fullName">Full Name</label>
-                        <input
-                            id="fullName"
-                            type="text"
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            placeholder="Enter your full name"
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="email">Email Address</label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="your@email.com"
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="password">Password</label>
-                        <div className="password-input-wrapper">
-                            <input
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                placeholder="Create a strong password"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="button"
-                                className="toggle-password"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? '🙈' : '👁️'}
-                            </button>
-                        </div>
-                        {password && (
-                            <div className="password-strength">
-                                <div className="strength-bars">
-                                    {[1, 2, 3, 4].map(level => (
-                                        <div
-                                            key={level}
-                                            className="strength-bar"
-                                            style={{
-                                                background: passwordStrength.strength >= level
-                                                    ? passwordStrength.color
-                                                    : '#e2e8f0'
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                                <span style={{ color: passwordStrength.color }}>
-                                    {passwordStrength.label}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirm Password</label>
-                        <input
-                            id="confirmPassword"
-                            type={showPassword ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm your password"
-                            disabled={isLoading}
-                            className={confirmPassword && confirmPassword !== password ? 'error' : ''}
-                        />
-                        {confirmPassword && confirmPassword !== password && (
-                            <span className="field-error">Passwords don't match</span>
-                        )}
-                    </div>
-
-                    <PhoneInput
-                        label="Phone Number (Optional)"
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        placeholder="Enter your phone number"
-                        disabled={isLoading}
-                    />
-
-                    <div className="terms-checkbox">
-                        <input
-                            type="checkbox"
-                            id="agreeTerms"
-                            checked={agreeTerms}
-                            onChange={e => setAgreeTerms(e.target.checked)}
-                        />
-                        <label htmlFor="agreeTerms">
-                            I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
-                        </label>
-                    </div>
-
-                    {error && <p className="error-message">{error}</p>}
-
-                    <button
-                        type="submit"
-                        className="auth-button primary"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <span className="loading-spinner"></span>
-                        ) : (
-                            'Create Account'
-                        )}
-                    </button>
-                </form>
-
-                <div className="auth-divider">
-                    <span>or</span>
-                </div>
-
-                <button className="auth-button google-button">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                    Continue with Google
-                </button>
-
-                <div className="auth-footer">
-                    <p>Already have an account?</p>
-                    <Link to="/auth/login/email">Login</Link>
-                </div>
-
-                <div className="elder-signup-link">
-                    <p>Are you an elder?</p>
-                    <Link to="/auth/signup/elder">Create Elder Account →</Link>
-                </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-8 text-white h-full">
+          {/* Logo & Brand */}
+          <div>
+            <div className="flex items-center gap-3 mb-10">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold tracking-tight">ElderGuard Family</span>
             </div>
 
-            <style>{`
-        .auth-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
+            <h1 className="text-3xl font-bold leading-tight mb-3">
+              Care for your<br />
+              <span className="text-teal-200">loved ones</span> closely
+            </h1>
+            <p className="text-base text-white/80 max-w-sm leading-relaxed">
+              Stay connected, monitor health updates, and provide the best care with ElderNest.
+            </p>
+          </div>
 
-        .auth-container {
-          width: 100%;
-          max-width: 440px;
-          background: white;
-          border-radius: 24px;
-          padding: 40px;
-          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-        }
+          {/* Step Progress */}
+          <div className="space-y-3">
+            {[1, 2].map((s) => (
+              <div
+                key={s}
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${s === step ? 'bg-white/20 backdrop-blur-sm' : 'opacity-60'
+                  }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${s < step ? 'bg-teal-400 text-white' :
+                  s === step ? 'bg-white text-teal-600' :
+                    'bg-white/30 text-white'
+                  }`}>
+                  {s < step ? <Check size={16} /> : s}
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{stepTitles[s - 1].title}</p>
+                  <p className="text-xs text-white/70">{stepTitles[s - 1].subtitle}</p>
+                </div>
+              </div>
+            ))}
+          </div>
 
-        .auth-header {
-          text-align: center;
-          margin-bottom: 32px;
-        }
-
-        .auth-logo {
-          font-size: 48px;
-          margin-bottom: 16px;
-        }
-
-        .auth-title {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1a202c;
-          margin: 0 0 8px 0;
-        }
-
-        .auth-subtitle {
-          color: #6b7280;
-          margin: 0;
-        }
-
-        .auth-form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .form-group label {
-          font-size: 14px;
-          font-weight: 500;
-          color: #374151;
-        }
-
-        .form-group input {
-          height: 48px;
-          padding: 0 16px;
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          font-size: 16px;
-          transition: all 0.2s ease;
-          outline: none;
-        }
-
-        .form-group input:focus {
-          border-color: #6366f1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-        }
-
-        .form-group input.error {
-          border-color: #ef4444;
-        }
-
-        .password-input-wrapper {
-          position: relative;
-        }
-
-        .password-input-wrapper input {
-          width: 100%;
-          padding-right: 48px;
-        }
-
-        .toggle-password {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 18px;
-          padding: 4px;
-        }
-
-        .password-strength {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 4px;
-        }
-
-        .strength-bars {
-          display: flex;
-          gap: 4px;
-          flex: 1;
-        }
-
-        .strength-bar {
-          height: 4px;
-          flex: 1;
-          border-radius: 2px;
-          transition: background 0.3s ease;
-        }
-
-        .password-strength span {
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .field-error {
-          color: #ef4444;
-          font-size: 12px;
-        }
-
-        .terms-checkbox {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          margin-top: 8px;
-        }
-
-        .terms-checkbox input {
-          margin-top: 4px;
-          width: 16px;
-          height: 16px;
-        }
-
-        .terms-checkbox label {
-          font-size: 13px;
-          color: #6b7280;
-          line-height: 1.5;
-        }
-
-        .terms-checkbox a {
-          color: #6366f1;
-          text-decoration: none;
-        }
-
-        .terms-checkbox a:hover {
-          text-decoration: underline;
-        }
-
-        .error-message {
-          color: #ef4444;
-          font-size: 14px;
-          margin: 0;
-          text-align: center;
-        }
-
-        .auth-button {
-          height: 52px;
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          text-decoration: none;
-          border: none;
-        }
-
-        .auth-button.primary {
-          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-          color: white;
-        }
-
-        .auth-button.primary:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .auth-button.primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .auth-button.google-button {
-          background: white;
-          color: #374151;
-          border: 2px solid #e2e8f0;
-        }
-
-        .auth-button.google-button:hover {
-          background: #f8fafc;
-        }
-
-        .auth-button.google-button img {
-          width: 20px;
-          height: 20px;
-        }
-
-        .loading-spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .auth-divider {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin: 24px 0;
-        }
-
-        .auth-divider::before,
-        .auth-divider::after {
-          content: '';
-          flex: 1;
-          height: 1px;
-          background: #e2e8f0;
-        }
-
-        .auth-divider span {
-          color: #9ca3af;
-          font-size: 14px;
-        }
-
-        .auth-footer {
-          text-align: center;
-          margin-top: 24px;
-        }
-
-        .auth-footer p {
-          color: #6b7280;
-          margin: 0 0 8px 0;
-        }
-
-        .auth-footer a {
-          color: #6366f1;
-          font-weight: 600;
-          text-decoration: none;
-        }
-
-        .auth-footer a:hover {
-          text-decoration: underline;
-        }
-
-        .elder-signup-link {
-          text-align: center;
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid #e2e8f0;
-        }
-
-        .elder-signup-link p {
-          color: #6b7280;
-          margin: 0 0 4px 0;
-          font-size: 14px;
-        }
-
-        .elder-signup-link a {
-          color: #10b981;
-          font-weight: 600;
-          text-decoration: none;
-        }
-
-        .elder-signup-link a:hover {
-          text-decoration: underline;
-        }
-      `}</style>
+          {/* Already have account */}
+          <p className="text-white/80 text-sm">
+            Already have a family account?{' '}
+            <Link to="/auth/login?role=family" className="text-white font-semibold hover:underline">
+              Sign In
+            </Link>
+          </p>
         </div>
-    );
+      </motion.div>
+
+      {/* Right Panel - Form */}
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="w-full lg:w-7/12 flex items-center justify-center p-4 md:p-6 overflow-y-auto"
+        style={{ backgroundColor: '#f8fafc' }}
+      >
+        <div className="w-full max-w-md">
+          {/* Mobile Header */}
+          <div className="lg:hidden mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-6 h-6 text-teal-600" />
+              <span className="text-lg font-bold text-gray-800">ElderNest Family</span>
+            </div>
+          </div>
+
+          {/* Step Indicator (Mobile) */}
+          <div className="lg:hidden flex justify-center gap-2 mb-6">
+            {[1, 2].map((s) => (
+              <div
+                key={s}
+                className={`w-3 h-3 rounded-full transition-all ${s <= step ? 'bg-teal-600' : 'bg-gray-200'
+                  } ${s === step ? 'scale-125' : ''}`}
+              />
+            ))}
+          </div>
+
+          {/* Header */}
+          <div className="mb-6 text-center lg:text-left">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">{stepTitles[step - 1].title}</h2>
+            <p className="text-gray-500 text-sm">{stepTitles[step - 1].subtitle}</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
+                >
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        {...register('fullName')}
+                        placeholder="Enter your full name"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      />
+                    </div>
+                    {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        {...register('email')}
+                        placeholder="your.email@example.com"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      />
+                    </div>
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="password"
+                        {...register('password')}
+                        placeholder="Create a password"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      />
+                    </div>
+                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Confirm Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="password"
+                        {...register('confirmPassword')}
+                        placeholder="Confirm your password"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      />
+                    </div>
+                    {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
+                >
+                  <div className="bg-teal-50 p-3 rounded-xl text-teal-800 text-sm">
+                    We need your contact details to connect you with your family.
+                  </div>
+
+                  {/* Phone with Country Code */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Phone Number</label>
+                    <div className="flex gap-2">
+                      <select
+                        {...register('countryCode')}
+                        className="w-28 px-3 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-sm"
+                      >
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+44">🇬🇧 +44</option>
+                        <option value="+91">🇮🇳 +91</option>
+                        <option value="+61">🇦🇺 +61</option>
+                        <option value="+86">🇨🇳 +86</option>
+                        <option value="+81">🇯🇵 +81</option>
+                        <option value="+49">🇩🇪 +49</option>
+                        <option value="+33">🇫🇷 +33</option>
+                        <option value="+39">🇮🇹 +39</option>
+                        <option value="+7">🇷🇺 +7</option>
+                      </select>
+                      <div className="relative flex-1">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          {...register('phone')}
+                          placeholder="123 456 7890"
+                          className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                        />
+                      </div>
+                    </div>
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                  </div>
+
+                  {/* Terms */}
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl mt-4">
+                    <input
+                      type="checkbox"
+                      {...register('agreeToTerms')}
+                      className="w-5 h-5 mt-0.5 text-teal-600 rounded focus:ring-teal-500"
+                    />
+                    <p className="text-sm text-gray-600">
+                      I agree to the <Link to="#" className="text-teal-600 underline">Terms of Service</Link> and <Link to="#" className="text-teal-600 underline">Privacy Policy</Link>
+                    </p>
+                  </div>
+                  {errors.agreeToTerms && <p className="text-red-500 text-xs mt-1">{errors.agreeToTerms.message}</p>}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-xl text-center text-sm font-medium"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="mt-6 flex gap-3">
+              {step > 1 && (
+                <motion.button
+                  type="button"
+                  onClick={prevStep}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
+                  <ChevronLeft size={18} /> Back
+                </motion.button>
+              )}
+
+              {step < 2 ? (
+                <motion.button
+                  type="button"
+                  onClick={nextStep}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-3 font-semibold text-white rounded-xl transition-all flex items-center justify-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #0e7490 50%, #059669 100%)'
+                  }}
+                >
+                  Continue <ChevronRight size={18} />
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="submit"
+                  disabled={isLoading}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-3 font-semibold text-white rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #0e7490 50%, #059669 100%)'
+                  }}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Create Account...
+                    </span>
+                  ) : (
+                    <>Complete Signup <Check size={18} /></>
+                  )}
+                </motion.button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="relative flex items-center py-4 mt-4">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="px-4 text-gray-400 text-xs">Or sign up with</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+
+            {/* Google Signup */}
+            <OAuthButton
+              role="family"
+              onSuccess={() => navigate('/family')}
+              onError={(msg) => setError(msg)}
+            />
+
+            {/* Mobile Sign In Link */}
+            <p className="lg:hidden text-center text-gray-600 text-sm mt-4">
+              Already have an account?{' '}
+              <Link to="/auth/login?role=family" className="text-teal-600 font-semibold">
+                Sign In
+              </Link>
+            </p>
+          </form>
+        </div>
+      </motion.div>
+    </div>
+  );
 };
 
 export default FamilySignupPage;

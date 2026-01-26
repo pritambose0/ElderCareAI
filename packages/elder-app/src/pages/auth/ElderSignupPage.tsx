@@ -147,7 +147,7 @@ const ElderSignupPage: React.FC = () => {
       if (result.success && result.pendingConnectionId) {
         setPendingConnectionId(result.pendingConnectionId);
         setFamilyPhoneDisplay(result.familyPhoneDisplay || familyPhone);
-        setStep(4);
+        // Remain on Step 3 for OTP input
       } else {
         setError(result.message || 'Failed to send family verification');
       }
@@ -183,7 +183,7 @@ const ElderSignupPage: React.FC = () => {
       <div className="auth-container">
         {/* Progress indicator */}
         <div className="progress-bar">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div
               key={s}
               className={`progress-step ${step >= s ? 'active' : ''} ${step > s ? 'completed' : ''}`}
@@ -194,15 +194,14 @@ const ElderSignupPage: React.FC = () => {
               <span className="step-label">
                 {s === 1 && 'Phone'}
                 {s === 2 && 'Verify'}
-                {s === 3 && 'Details'}
-                {s === 4 && 'Family'}
+                {s === 3 && 'Security'}
               </span>
             </div>
           ))}
           <div className="progress-line">
             <div
               className="progress-fill"
-              style={{ width: `${((step - 1) / 3) * 100}%` }}
+              style={{ width: `${((step - 1) / 2) * 100}%` }}
             />
           </div>
         </div>
@@ -211,14 +210,12 @@ const ElderSignupPage: React.FC = () => {
           <h1 className="auth-title">
             {step === 1 && 'Create Elder Account'}
             {step === 2 && 'Verify Your Phone'}
-            {step === 3 && 'Your Information'}
-            {step === 4 && 'Family Verification'}
+            {step === 3 && 'Security Verification'}
           </h1>
           <p className="auth-subtitle">
             {step === 1 && 'Enter your phone number to get started'}
             {step === 2 && 'Enter the code sent to your phone'}
-            {step === 3 && 'Tell us about yourself and your family member'}
-            {step === 4 && `Waiting for ${familyPhoneDisplay} to verify`}
+            {step === 3 && 'Verify a family member for your safety'}
           </p>
         </div>
 
@@ -270,119 +267,137 @@ const ElderSignupPage: React.FC = () => {
           </div>
         )}
 
-        {/* Step 3: Personal info & family phone */}
+        {/* Step 3: Security & Family Verification */}
         {step === 3 && (
-          <form onSubmit={handleStep3} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="fullName">Your Full Name</label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                placeholder="Enter your full name"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="age">Your Age</label>
-              <input
-                id="age"
-                type="number"
-                value={age}
-                onChange={e => setAge(e.target.value)}
-                placeholder="Enter your age"
-                min="1"
-                max="120"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="form-divider">
-              <span>👨‍👩‍👧‍👦 Family Member Details</span>
-            </div>
-
-            <div className="form-group">
-              <label>Relationship to You</label>
-              <div className="relation-grid">
-                {FAMILY_RELATIONS.map(rel => (
-                  <button
-                    key={rel.value}
-                    type="button"
-                    className={`relation-button ${familyRelation === rel.value ? 'selected' : ''}`}
-                    onClick={() => setFamilyRelation(rel.value)}
-                  >
-                    {rel.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <PhoneInput
-              label="Family Member's Phone Number"
-              value={familyPhone}
-              onChange={handleFamilyPhoneChange}
-              placeholder="Enter their phone number"
-              disabled={isLoading}
-            />
-
-            <p className="info-text">
-              We'll send a verification code to your family member to confirm your connection.
-            </p>
-
-            {error && <p className="error-message">{error}</p>}
-
-            <button
-              type="submit"
-              className="auth-button primary"
-              disabled={isLoading || !fullName || !age || !familyPhone}
-            >
-              {isLoading ? <span className="loading-spinner"></span> : 'Send Verification to Family'}
-            </button>
-
-            <button
-              type="button"
-              className="back-button"
-              onClick={() => setStep(2)}
-            >
-              ← Go back
-            </button>
-          </form>
-        )}
-
-        {/* Step 4: Family OTP verification */}
-        {step === 4 && (
           <div className="auth-form">
-            <div className="waiting-illustration">
-              📱
-            </div>
+            {!pendingConnectionId ? (
+              // Phase A: Enter Details & Send Code
+              <form onSubmit={handleStep3}>
+                <div className="form-group">
+                  <label htmlFor="fullName">Your Full Name</label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={e => {
+                      setFullName(e.target.value);
+                      setError('');
+                    }}
+                    placeholder="Enter your full name"
+                    disabled={isLoading}
+                  />
+                </div>
 
-            <p className="waiting-text">
-              We've sent a verification code to your family member at <strong>{familyPhoneDisplay}</strong>.
-              Ask them to share the 6-digit code with you.
-            </p>
+                <div className="form-group">
+                  <label htmlFor="age">Your Age</label>
+                  <input
+                    id="age"
+                    type="number"
+                    value={age}
+                    onChange={e => {
+                      setAge(e.target.value);
+                      setError('');
+                    }}
+                    placeholder="Enter your age"
+                    min="1"
+                    max="120"
+                    disabled={isLoading}
+                  />
+                </div>
 
-            <OTPInput
-              onComplete={handleStep4}
-              disabled={isLoading}
-              error={error}
-            />
+                <div className="form-divider">
+                  <span className="text-red-500 font-bold">🛡️ Security Contact (Required)</span>
+                </div>
 
-            {isLoading && (
-              <div className="verifying-message">
-                <span className="loading-spinner"></span>
-                Creating your account...
+                <p className="text-sm text-gray-500 text-center -mt-2 mb-2">
+                  To ensure your safety, we need to verify a family member.
+                </p>
+
+                <div className="form-group">
+                  <label>Relationship to You</label>
+                  <div className="relation-grid">
+                    {FAMILY_RELATIONS.map(rel => (
+                      <button
+                        key={rel.value}
+                        type="button"
+                        className={`relation-button ${familyRelation === rel.value ? 'selected' : ''}`}
+                        onClick={() => setFamilyRelation(rel.value)}
+                      >
+                        {rel.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <PhoneInput
+                  label="Family Member's Phone Number (Required)"
+                  value={familyPhone}
+                  onChange={handleFamilyPhoneChange}
+                  placeholder="Enter their phone number"
+                  disabled={isLoading}
+                  error={error.includes("family member") ? error : undefined}
+                />
+
+                <p className="info-text">
+                  We'll send a verification code to your family member.
+                </p>
+
+                {error && !error.includes("family member") && <p className="error-message">{error}</p>}
+
+                <button
+                  type="submit"
+                  className="auth-button primary"
+                  disabled={isLoading || !fullName || !age || !familyPhone || familyPhone.length < 8}
+                >
+                  {isLoading ? <span className="loading-spinner"></span> : 'Send Verification Code'}
+                </button>
+
+                <button
+                  type="button"
+                  className="back-button"
+                  onClick={() => setStep(2)}
+                >
+                  ← Go back
+                </button>
+              </form>
+            ) : (
+              // Phase B: Enter OTP & Create Account
+              <div className="flex flex-col gap-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-800">Verify Family Connection</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    We sent a code to <strong>{familyPhoneDisplay}</strong>. <br />
+                    Please ask them for the code and enter it below.
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="text-center font-medium">Security Verification Code</label>
+                  <OTPInput
+                    onComplete={handleStep4}
+                    disabled={isLoading}
+                    error={error}
+                  />
+                </div>
+
+                {isLoading && (
+                  <div className="verifying-message">
+                    <span className="loading-spinner"></span>
+                    Creating Account...
+                  </div>
+                )}
+
+                {error && <p className="error-message">{error}</p>}
+
+                <button
+                  type="button"
+                  className="back-button"
+                  onClick={() => setPendingConnectionId('')}
+                >
+                  ← Change family details
+                </button>
               </div>
             )}
-
-            <button
-              type="button"
-              className="back-button"
-              onClick={() => setStep(3)}
-            >
-              ← Change family details
-            </button>
           </div>
         )}
 

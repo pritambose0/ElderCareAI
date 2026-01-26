@@ -41,7 +41,13 @@ function App() {
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/signup" element={<SignupPage />} />
             <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/profile-setup" element={<ProfileSetupPage />} />
+
+            {/* Profile Setup - Protected (Elder only) */}
+            <Route path="/auth/profile-setup" element={
+              <ProtectedRoute allowedRoles={['elder']} requireSetup={false}>
+                <ProfileSetupPage />
+              </ProtectedRoute>
+            } />
 
             {/* Protected Routes - Dashboard */}
             <Route path="/dashboard" element={
@@ -55,7 +61,6 @@ function App() {
                 <ChatPage />
               </ProtectedRoute>
             } />
-<<<<<<< HEAD
 
             {/* Family Portal Routes */}
             <Route path="/family" element={
@@ -69,19 +74,7 @@ function App() {
               <Route path="profile" element={<ProfilePage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
-=======
-<<<<<<< Updated upstream
-=======
-            <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/signup" element={<SignupPage />} />
-            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/profile-setup" element={
-              <ProtectedRoute allowedRoles={['elder']} requireSetup={false}>
-                <ProfileSetupPage />
-              </ProtectedRoute>
-            } />
->>>>>>> Stashed changes
->>>>>>> dda48d0b4e395be034bb5f22f1c6ec053bf8b854
+
           </Routes>
         </div>
       </BrowserRouter>

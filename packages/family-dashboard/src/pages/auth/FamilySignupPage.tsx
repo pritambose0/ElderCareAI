@@ -8,285 +8,286 @@ import PhoneInput from '../../components/auth/PhoneInput';
 import { signUpFamily, getFriendlyErrorMessage } from '@elder-nest/shared';
 
 const FamilySignupPage: React.FC = () => {
-    const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [countryCode, setCountryCode] = useState('IN');
-    const [connectionCode, setConnectionCode] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [agreeTerms, setAgreeTerms] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('IN');
+  const [connectionCode, setConnectionCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
-    const handlePhoneChange = (newPhone: string, newCountryCode: string) => {
-        setPhone(newPhone);
-        setCountryCode(newCountryCode);
-    };
+  const handlePhoneChange = (newPhone: string, newCountryCode: string) => {
+    setPhone(newPhone);
+    setCountryCode(newCountryCode);
+  };
 
-    const validateForm = (): string | null => {
-        if (!fullName.trim()) {
-            return 'Please enter your full name';
-        }
-        if (!email.trim()) {
-            return 'Please enter your email';
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return 'Please enter a valid email address';
-        }
-        if (!password) {
-            return 'Please enter a password';
-        }
-        if (password.length < 8) {
-            return 'Password must be at least 8 characters';
-        }
-        if (!/[A-Z]/.test(password)) {
-            return 'Password must contain at least one uppercase letter';
-        }
-        if (!/[a-z]/.test(password)) {
-            return 'Password must contain at least one lowercase letter';
-        }
-        if (!/[0-9]/.test(password)) {
-            return 'Password must contain at least one number';
-        }
-        if (password !== confirmPassword) {
-            return 'Passwords do not match';
-        }
-        if (!agreeTerms) {
-            return 'Please agree to the Terms of Service';
-        }
-        return null;
-    };
+  const validateForm = (): string | null => {
+    if (!fullName.trim()) {
+      return 'Please enter your full name';
+    }
+    if (!email.trim()) {
+      return 'Please enter your email';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return 'Please enter a valid email address';
+    }
+    if (!password) {
+      return 'Please enter a password';
+    }
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'Password must contain at least one number';
+    }
+    if (password !== confirmPassword) {
+      return 'Passwords do not match';
+    }
+    if (!agreeTerms) {
+      return 'Please agree to the Terms of Service';
+    }
+    return null;
+  };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-        const validationError = validateForm();
-        if (validationError) {
-            setError(validationError);
-            return;
-        }
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-        setIsLoading(true);
-        setError('');
+    setIsLoading(true);
+    setError('');
 
-        try {
-            await signUpFamily({
-                email: email.trim().toLowerCase(),
-                password,
-                fullName: fullName.trim(),
-                phone: phone || '', // Pass empty string or value, handled in auth.ts
-                countryCode: phone ? countryCode : '',
-                connectionCode: connectionCode.trim(), 
-            });
+    try {
+      await signUpFamily({
+        email: email.trim().toLowerCase(),
+        password,
+        fullName: fullName.trim(),
+        phone: phone || '', // Pass empty string or value, handled in auth.ts
+        countryCode: phone ? countryCode : '',
+        connectionCode: connectionCode.trim(),
+      });
 
-            // Authentication state listener in App will redirect, but we force nav here too
-            navigate('/family');
+      // Authentication state listener in App will redirect, but we force nav here too
+      navigate('/family');
 
-        } catch (err: any) {
-            console.error("Signup Error Details:", err);
-            
-            // Priority 1: Use specific friendly message if mapped
-            let message = getFriendlyErrorMessage(err.code);
-            
-            // Priority 2: Use direct error message if it's not the generic fallback
-            if (message === 'An unexpected error occurred. Please try again.' && err.message) {
-                message = err.message;
-            }
-            
-            setError(message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    } catch (err: any) {
+      console.error("Signup Error Details:", err);
 
-    // Password strength indicator
-    const getPasswordStrength = (): { strength: number; label: string; color: string } => {
-        if (!password) return { strength: 0, label: '', color: '#e2e8f0' };
+      // Priority 1: Use specific friendly message if mapped
+      let message = getFriendlyErrorMessage(err.code);
 
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (/[A-Z]/.test(password)) strength++;
-        if (/[a-z]/.test(password)) strength++;
-        if (/[0-9]/.test(password)) strength++;
-        if (/[^A-Za-z0-9]/.test(password)) strength++;
+      // Priority 2: Use direct error message if it's not the generic fallback
+      if (message === 'An unexpected error occurred. Please try again.' && err.message) {
+        message = err.message;
+      }
 
-        if (strength <= 2) return { strength: 1, label: 'Weak', color: '#ef4444' };
-        if (strength <= 3) return { strength: 2, label: 'Medium', color: '#f59e0b' };
-        if (strength <= 4) return { strength: 3, label: 'Strong', color: '#10b981' };
-        return { strength: 4, label: 'Very Strong', color: '#059669' };
-    };
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const passwordStrength = getPasswordStrength();
+  // Password strength indicator
+  const getPasswordStrength = (): { strength: number; label: string; color: string } => {
+    if (!password) return { strength: 0, label: '', color: '#e2e8f0' };
 
-    return (
-        <div className="auth-page">
-            <div className="auth-container">
-                <div className="auth-header">
-                    <div className="auth-logo">👨‍👩‍👧</div>
-                    <h1 className="auth-title">Create Family Account</h1>
-                    <p className="auth-subtitle">Join ElderNest to care for your loved ones</p>
-                </div>
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
 
-                <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-group">
-                        <label htmlFor="fullName">Full Name</label>
-                        <input
-                            id="fullName"
-                            type="text"
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            placeholder="Enter your full name"
-                            disabled={isLoading}
-                        />
-                    </div>
+    if (strength <= 2) return { strength: 1, label: 'Weak', color: '#ef4444' };
+    if (strength <= 3) return { strength: 2, label: 'Medium', color: '#f59e0b' };
+    if (strength <= 4) return { strength: 3, label: 'Strong', color: '#10b981' };
+    return { strength: 4, label: 'Very Strong', color: '#059669' };
+  };
 
-                    <div className="form-group">
-                        <label htmlFor="email">Email Address</label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="your@email.com"
-                            disabled={isLoading}
-                        />
-                    </div>
+  const passwordStrength = getPasswordStrength();
 
-                    <div className="form-group">
-                        <label htmlFor="password">Password</label>
-                        <div className="password-input-wrapper">
-                            <input
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                placeholder="Create a strong password"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="button"
-                                className="toggle-password"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? '🙈' : '👁️'}
-                            </button>
-                        </div>
-                        {password && (
-                            <div className="password-strength">
-                                <div className="strength-bars">
-                                    {[1, 2, 3, 4].map(level => (
-                                        <div
-                                            key={level}
-                                            className="strength-bar"
-                                            style={{
-                                                background: passwordStrength.strength >= level
-                                                    ? passwordStrength.color
-                                                    : '#e2e8f0'
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                                <span style={{ color: passwordStrength.color }}>
-                                    {passwordStrength.label}
-                                </span>
-                            </div>
-                        )}
-                    </div>
+  return (
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-header">
+          <div className="auth-logo">👨‍👩‍👧</div>
+          <h1 className="auth-title">Create Family Account</h1>
+          <p className="auth-subtitle">Join ElderNest to care for your loved ones</p>
+        </div>
 
-                    <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirm Password</label>
-                        <input
-                            id="confirmPassword"
-                            type={showPassword ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm your password"
-                            disabled={isLoading}
-                            className={confirmPassword && confirmPassword !== password ? 'error' : ''}
-                        />
-                        {confirmPassword && confirmPassword !== password && (
-                            <span className="field-error">Passwords don't match</span>
-                        )}
-                    </div>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="fullName">Full Name</label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={e => { setFullName(e.target.value); setError(''); }}
+              placeholder="Enter your full name"
+              disabled={isLoading}
+            />
+          </div>
 
-                    <PhoneInput
-                        label="Phone Number (Optional)"
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        placeholder="Enter your phone number"
-                        disabled={isLoading}
-                    />
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError(''); }}
+              placeholder="your@email.com"
+              disabled={isLoading}
+            />
+          </div>
 
-                    {/* Connection Code Input */}
-                    <div className="form-group" style={{ marginTop: '16px' }}>
-                        <label htmlFor="connectionCode">Elder Connection Code (Optional)</label>
-                        <input
-                            id="connectionCode"
-                            type="text"
-                            placeholder="e.g. 123456"
-                            className="font-mono tracking-wider text-center uppercase"
-                            maxLength={6}
-                            disabled={isLoading}
-                            value={connectionCode}
-                            onChange={(e) => setConnectionCode(e.target.value)}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Ask your elder family member for their 6-digit code.
-                        </p>
-                    </div>
-
-                    <div className="terms-checkbox">
-                        <input
-                            type="checkbox"
-                            id="agreeTerms"
-                            checked={agreeTerms}
-                            onChange={e => setAgreeTerms(e.target.checked)}
-                        />
-                        <label htmlFor="agreeTerms">
-                            I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
-                        </label>
-                    </div>
-
-                    {error && <p className="error-message">{error}</p>}
-
-                    <button
-                        type="submit"
-                        className="auth-button primary"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <span className="loading-spinner"></span>
-                        ) : (
-                            'Create Account'
-                        )}
-                    </button>
-                </form>
-
-                <div className="auth-divider">
-                    <span>or</span>
-                </div>
-
-                <button className="auth-button google-button">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                    Continue with Google
-                </button>
-
-                <div className="auth-footer">
-                    <p>Already have an account?</p>
-                    <Link to="/auth/login/email">Login</Link>
-                </div>
-
-                <div className="elder-signup-link">
-                    <p>Are you an elder?</p>
-                    <Link to="/auth/signup/elder">Create Elder Account →</Link>
-                </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <div className="password-input-wrapper">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError(''); }}
+                placeholder="Create a strong password"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
             </div>
+            {password && (
+              <div className="password-strength">
+                <div className="strength-bars">
+                  {[1, 2, 3, 4].map(level => (
+                    <div
+                      key={level}
+                      className="strength-bar"
+                      style={{
+                        background: passwordStrength.strength >= level
+                          ? passwordStrength.color
+                          : '#e2e8f0'
+                      }}
+                    />
+                  ))}
+                </div>
+                <span style={{ color: passwordStrength.color }}>
+                  {passwordStrength.label}
+                </span>
+              </div>
+            )}
+          </div>
 
-            <style>{`
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password</label>
+            <input
+              id="confirmPassword"
+              type={showPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
+              placeholder="Confirm your password"
+              disabled={isLoading}
+              className={confirmPassword && confirmPassword !== password ? 'error' : ''}
+            />
+            {confirmPassword && confirmPassword !== password && (
+              <span className="field-error">Passwords don't match</span>
+            )}
+          </div>
+
+          <PhoneInput
+            label="Phone Number (Optional)"
+            value={phone}
+            onChange={handlePhoneChange}
+            placeholder="Enter your phone number"
+            disabled={isLoading}
+            error={phone && phone.length < 8 ? 'Phone number seems too short' : undefined}
+          />
+
+          {/* Connection Code Input */}
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label htmlFor="connectionCode">Elder Connection Code (Optional)</label>
+            <input
+              id="connectionCode"
+              type="text"
+              placeholder="e.g. 123456"
+              className="font-mono tracking-wider text-center uppercase"
+              maxLength={6}
+              disabled={isLoading}
+              value={connectionCode}
+              onChange={(e) => setConnectionCode(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Ask your elder family member for their 6-digit code.
+            </p>
+          </div>
+
+          <div className="terms-checkbox">
+            <input
+              type="checkbox"
+              id="agreeTerms"
+              checked={agreeTerms}
+              onChange={e => setAgreeTerms(e.target.checked)}
+            />
+            <label htmlFor="agreeTerms">
+              I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
+            </label>
+          </div>
+
+          {error && <p className="error-message">{error}</p>}
+
+          <button
+            type="submit"
+            className="auth-button primary"
+            disabled={isLoading || (!!confirmPassword && confirmPassword !== password) || (!!phone && phone.length < 8)}
+          >
+            {isLoading ? (
+              <span className="loading-spinner"></span>
+            ) : (
+              'Create Account'
+            )}
+          </button>
+        </form>
+
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
+        <button className="auth-button google-button">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+          Continue with Google
+        </button>
+
+        <div className="auth-footer">
+          <p>Already have an account?</p>
+          <Link to="/auth/login/email">Login</Link>
+        </div>
+
+        <div className="elder-signup-link">
+          <p>Are you an elder?</p>
+          <Link to="/auth/signup/elder">Create Elder Account →</Link>
+        </div>
+      </div>
+
+      <style>{`
         .auth-page {
           min-height: 100vh;
           display: flex;
@@ -571,8 +572,8 @@ const FamilySignupPage: React.FC = () => {
           text-decoration: underline;
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
 export default FamilySignupPage;
