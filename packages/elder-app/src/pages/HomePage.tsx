@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EmergencyButton } from "@/features/emergency/EmergencyButton";
 import { MoodSelector } from "@/features/mood/MoodSelector";
 import { MedicineList } from "@/features/medicine/MedicineList";
@@ -15,10 +15,23 @@ import {
   Heart,
   Camera,
   ShieldCheck,
-  Activity
+  Activity,
+  LogOut,
+  ArrowLeft
 } from "lucide-react";
 
 export const HomePage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      const { signOut } = await import("@elder-nest/shared");
+      await signOut();
+      navigate('/auth/login');
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
+  };
   /* ---------------- THEME ---------------- */
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("elderDarkMode");
@@ -101,29 +114,40 @@ export const HomePage = () => {
 
   return (
     <div
-      className={`min-h-screen w-full transition-colors duration-500 ease-in-out ${
-        isDarkMode
+      className={`min-h-screen w-full transition-colors duration-500 ease-in-out ${isDarkMode
           ? "bg-slate-950 text-white"
           : "bg-gradient-to-br from-blue-50 via-indigo-50 to-white text-slate-800"
-      }`}
+        }`}
     >
       {/* ================= TOP BAR ================= */}
       <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border-b border-indigo-100 dark:border-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div>
-            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-            <h1 className={`font-bold text-slate-900 dark:text-white ${heading}`}>
-              Welcome,{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-500">
-                {userName}
-              </span>
-            </h1>
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              aria-label="Go Back"
+            >
+              <ArrowLeft size={24} className="text-slate-600 dark:text-slate-300" />
+            </motion.button>
+
+            <div>
+              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+              <h1 className={`font-bold text-slate-900 dark:text-white ${heading}`}>
+                Welcome,{" "}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-500">
+                  {userName}
+                </span>
+              </h1>
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -148,6 +172,16 @@ export const HomePage = () => {
             >
               {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
             </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleLogout}
+              className="w-12 h-12 rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-200 dark:shadow-none flex items-center justify-center"
+              aria-label="Logout"
+            >
+              <LogOut size={24} />
+            </motion.button>
           </div>
         </div>
 
@@ -171,7 +205,7 @@ export const HomePage = () => {
                 Share Code
               </button>
             </div>
-            <button 
+            <button
               onClick={() => setShowBanner(false)}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-white/20 rounded-full transition-colors"
               aria-label="Close Banner"
@@ -207,7 +241,7 @@ export const HomePage = () => {
                   <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700">
                     <MessageCircleHeart size={200} fill="currentColor" />
                   </div>
-                  
+
                   <div className="relative z-10">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 mb-6">
                       <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -238,7 +272,7 @@ export const HomePage = () => {
                     backgroundSize: '24px 24px'
                   }}
                 />
-                
+
                 {/* Header */}
                 <div className="relative z-10 p-6 flex justify-between items-start border-b border-white/10 bg-white/5 backdrop-blur-sm">
                   <div className="flex items-center gap-3">
@@ -253,7 +287,7 @@ export const HomePage = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 bg-indigo-500/20 px-3 py-1.5 rounded-full border border-indigo-500/30">
                     <ShieldCheck size={16} className="text-indigo-300" />
                     <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">AI Guard On</span>
@@ -262,18 +296,18 @@ export const HomePage = () => {
 
                 {/* Main Content Area */}
                 <div className="flex-1 relative p-8 flex items-center justify-center">
-                   {/* Scanning Effect */}
-                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent h-full w-full animate-accordion-down opacity-30 pointer-events-none" />
-                   
-                   <div className="text-center relative z-10">
-                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 mb-4 border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
-                        <Activity className="text-emerald-400" size={40} />
-                      </div>
-                      <h4 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
-                        Room Secure
-                      </h4>
-                      <p className="text-slate-400 text-sm mt-1">No unusual activity detected</p>
-                   </div>
+                  {/* Scanning Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent h-full w-full animate-accordion-down opacity-30 pointer-events-none" />
+
+                  <div className="text-center relative z-10">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 mb-4 border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+                      <Activity className="text-emerald-400" size={40} />
+                    </div>
+                    <h4 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                      Room Secure
+                    </h4>
+                    <p className="text-slate-400 text-sm mt-1">No unusual activity detected</p>
+                  </div>
                 </div>
               </div>
             </motion.div>

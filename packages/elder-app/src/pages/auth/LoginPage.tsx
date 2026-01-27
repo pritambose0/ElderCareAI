@@ -282,8 +282,14 @@ const LoginPage = () => {
 
                         {/* Google Login */}
                         <OAuthButton
-                            role="elder"
-                            onSuccess={() => navigate('/dashboard')}
+                            role={roleParam === 'family' ? 'family' : 'elder'}
+                            onSuccess={() => {
+                                if (roleParam === 'family') {
+                                    navigate('/family');
+                                } else {
+                                    navigate('/dashboard');
+                                }
+                            }}
                             onError={(msg) => setError(msg)}
                         />
 
