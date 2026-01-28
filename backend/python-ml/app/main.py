@@ -669,7 +669,10 @@ async def enroll_face(request: EnrollFaceRequest):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @app.post("/api/vision/comprehensive-analysis", tags=["Vision"])
-async def comprehensive_vision(request: VisionComprehensiveRequest):
+async def comprehensive_vision(
+    request: VisionComprehensiveRequest,
+    background_tasks: BackgroundTasks
+):
     """
     Run ALL vision analyses in parallel:
     - Emotion
@@ -724,6 +727,34 @@ async def comprehensive_vision(request: VisionComprehensiveRequest):
             
         if intruder_res.get('alert_required'):
             response['alerts'].append({'type': 'security', 'severity': 'critical', 'message': intruder_res.get('alert_message')})
+            
+        # 🚨 AUTOMATIC ALERT TRIGGER
+        if response['alerts']:
+            # Determine highest priority alert
+            primary_alert = response['alerts'][0]
+            
+            # Construct emergency data payload
+            emergency_payload = {
+                'emergency': True,
+                'emergency_type': primary_alert['type'],
+                'severity': primary_alert['severity'],
+                'alert_message': primary_alert['message'],
+                'recommended_action': "Check immediately",
+                'timestamp': timestamp.isoformat()
+            }
+            
+            # Fetch user details to get family info
+            data_agg = app.state.data_aggregator
+            user_data = await data_agg.fetch_user_data(request.userId)
+            
+            # Send Alert in Background
+            background_tasks.add_task(
+                app.state.alert_service.send_emergency_alert,
+                elder_id=request.userId,
+                elder_name=user_data.get('elder_name', 'Elder'),
+                emergency_data=emergency_payload,
+                family_members=[fm for fm in user_data.get('family_members', [])]
+            )
             
         return response
 
