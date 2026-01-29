@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { EmergencyButton } from "@/features/emergency/EmergencyButton";
 import { MoodSelector } from "@/features/mood/MoodSelector";
 import { MedicineList } from "@/features/medicine/MedicineList";
-import { SmartHomeCamera } from "@/features/camera/SmartHomeCamera";
 import { motion } from "framer-motion";
 import {
   Sun,
@@ -14,13 +13,10 @@ import {
   Phone,
   Stethoscope,
   Heart,
-  Camera,
-  ShieldCheck,
-  Activity,
   LogOut,
-  ArrowLeft,
-  User
+  ArrowLeft
 } from "lucide-react";
+import { CameraMonitor } from "@/features/camera";
 
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -49,7 +45,6 @@ export const HomePage = () => {
 
   /* ---------------- USER DATA ---------------- */
   const [userName, setUserName] = useState("Friend");
-  const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [connectionCode, setConnectionCode] = useState<string | null>(null);
   const [emergencyContact, setEmergencyContact] = useState<string | null>(null);
 
@@ -68,7 +63,6 @@ export const HomePage = () => {
           const data = snap.data();
           setConnectionCode(data.connectionCode);
           setEmergencyContact(data.emergencyContact);
-          setPhotoURL(data.photoURL || null);
         }
       } catch (e) {
         console.error(e);
@@ -186,20 +180,6 @@ export const HomePage = () => {
             >
               <LogOut size={24} />
             </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/profile')}
-              className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-slate-700 overflow-hidden shadow-lg border-2 border-white dark:border-slate-600 flex items-center justify-center"
-              aria-label="Profile"
-            >
-              {photoURL ? (
-                <img src={photoURL} alt={userName} className="w-full h-full object-cover" />
-              ) : (
-                <User size={24} className="text-indigo-500 dark:text-indigo-300" />
-              )}
-            </motion.button>
           </div>
         </div>
 
@@ -280,9 +260,9 @@ export const HomePage = () => {
               </Link>
             </motion.div>
 
-            {/* CAMERA MONITORING PART (NEW) */}
+            {/* CAMERA MONITORING PART (REAL-TIME) */}
             <motion.div variants={itemVariants}>
-              <SmartHomeCamera />
+              <CameraMonitor />
             </motion.div>
 
             {/* OVERVIEW CARDS */}
@@ -411,4 +391,3 @@ export const HomePage = () => {
     </div>
   );
 };
-
